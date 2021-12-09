@@ -19,6 +19,6 @@ sudo apt install ros-$ROS_DISTRO-amcl
 sudo apt install ros-$ROS_DISTRO-map-server
 sudo apt install ros-$ROS_DISTRO-navigation
 sudo apt install ros-$ROS_DISTRO-fiducial-msgs
-
+sudo apt install ros-$ROS_DISTRO-moveit-visual-tools
 
 rospack profile
