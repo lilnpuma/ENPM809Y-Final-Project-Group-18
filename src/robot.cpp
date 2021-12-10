@@ -13,6 +13,9 @@ void fp::Robot::move(std::array<double,2> goal)
     ROS_INFO("Waiting for the move_base action server to come up for robot");
   }
   move_base_msgs::MoveBaseGoal goal;
-  
+}
 
+void fp::Robot::search_aruco()
+{
+    
 }
