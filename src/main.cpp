@@ -6,6 +6,8 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
+#include "../include/robot/robot.h"
+#include "../include/bot_controller.h"
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
@@ -25,6 +27,48 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseCl
 //       msg.angular.z = angular;
 //       m_velocity_publisher.publish(msg);
   // }
+
+void get_goal(ros::NodeHandle n, std::vector<std::array<double, 2>> aruco_loc)
+{
+  XmlRpc::XmlRpcValue pos_list1;
+  XmlRpc::XmlRpcValue pos_list2;
+  XmlRpc::XmlRpcValue pos_list3;
+  XmlRpc::XmlRpcValue pos_list4;
+  //this can be done using 1 array (will try after testing)
+  n.getParam("/aruco_lookup_locations/target_1", pos_list1);
+  n.getParam("/aruco_lookup_locations/target_2", pos_list2);
+  n.getParam("/aruco_lookup_locations/target_3", pos_list3);
+  n.getParam("/aruco_lookup_locations/target_4", pos_list4);
+  
+  ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  ROS_ASSERT(pos_list2.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  ROS_ASSERT(pos_list3.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+  for (int32_t i = 0; i < pos_list1.size(); ++i)
+  {
+    ROS_ASSERT(pos_list1[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+    aruco_loc.at(0).at(i) = static_cast<double>(pos_list1[i]);
+  }
+
+  for (int32_t i = 0; i < pos_list2.size(); ++i)
+  {
+    ROS_ASSERT(pos_list2[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+    aruco_loc.at(1).at(i) = static_cast<double>(pos_list2[i]);
+  } 
+
+  for (int32_t i = 0; i < pos_list3.size(); ++i)
+  {
+    ROS_ASSERT(pos_list3[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+    aruco_loc.at(2).at(i) = static_cast<double>(pos_list3[i]);
+  } 
+
+  for (int32_t i = 0; i < pos_list1.size(); ++i)
+  {
+    ROS_ASSERT(pos_list4[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+    aruco_loc.at(3).at(i) = static_cast<double>(pos_list4[i]);
+  }  
+} 
 
 void broadcast() {
   //for broadcaster
@@ -73,22 +117,22 @@ int main(int argc, char** argv)
 {
   bool explorer_goal_sent = false;
   bool follower_goal_sent = false;
-  std::array<double, 2> aruco_loc; //to store aruco marker locations
+ 
   
 
   ros::init(argc, argv, "simple_navigation_goals");
   ros::NodeHandle nh;
 
   //writing this to retrieve position data from parameter server
-  XmlRpc::XmlRpcValue pos_list1;
-  nh.getParam("/aruco_lookup_locations/target_1", pos_list1);
-  ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  // XmlRpc::XmlRpcValue pos_list1;
+  // nh.getParam("/aruco_lookup_locations/target_1", pos_list1);
+  // ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
-  for (int32_t i = 0; i < pos_list1.size(); ++i)
-  {
-    ROS_ASSERT(pos_list1[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-    aruco_loc.at(i) = static_cast<double>(pos_list1[i]);
-  } 
+  // for (int32_t i = 0; i < pos_list1.size(); ++i)
+  // {
+  //   ROS_ASSERT(pos_list1[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+  //   aruco_loc.at(i) = static_cast<double>(pos_list1[i]);
+  // } 
 
   // tell the action client that we want to spin a thread by default
   MoveBaseClient explorer_client("/explorer/move_base", true);
@@ -112,7 +156,7 @@ int main(int argc, char** argv)
   explorer_goal.target_pose.header.stamp = ros::Time::now();
   explorer_goal.target_pose.pose.position.x = aruco_loc.at(0);//
   explorer_goal.target_pose.pose.position.y = aruco_loc.at(1);//
-  explorer_goal.target_pose.pose.orientation.w = 1.0;
+  explorer_goal.target_pose.pose.orientation.w = 0.0;
 
   //Build goal for follower
   // follower_goal.target_pose.header.frame_id = "map";

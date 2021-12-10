@@ -11,6 +11,7 @@
 #ifndef ROBOT_H
 #define ROBOT_H
 #include<array>
+#include<vector>
 
 namespace fp {
     /**
@@ -21,16 +22,40 @@ namespace fp {
     class Robot
     {
     public:
+    /**
+     * @brief Get the goal from parameter server
+     * 
+     */
     void get_goal();
+    /**
+     * @brief move the robot to the goal location
+     * 
+     */
     void move();
+    /**
+     * @brief turn the explorer aroudn to find the aruco (fiducial callback)
+     * 
+     */
     void search_aruco(); 
+    /**
+     * @brief publishing aruco marker location to follower
+     * 
+     */
     void talker();
+    /**
+     * @brief recieving aruco marker location
+     * 
+     */
     void listener();
+    /**
+     * @brief hardcoded method to send the robot to home
+     * 
+     */
     void go_home();
 
     private:
     std::array<double,2>goal {};
-    std::array<std::array<double, 2>> aruco_loc;
+    std::vector<std::array<double, 2>> aruco_loc;
 
 
     };
