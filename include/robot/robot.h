@@ -34,7 +34,7 @@ namespace fp {
      * @brief Get the goal from parameter server
      * 
      */
-    void get_goal();
+    void get_goal(ros::NodeHandle n, std::vector<std::array<double, 2>> aruco_loc);
     /**
      * @brief move the robot to the goal location
      * 
