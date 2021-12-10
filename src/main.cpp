@@ -9,22 +9,22 @@
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-ros::Publisher m_velocity_publisher;
+// ros::Publisher m_velocity_publisher;
 
-void m_initialize_publishers(ros::NodeHandle c) 
-  {
-    // ROS_INFO("Initializing Publishers");
-    m_velocity_publisher = c.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
-    //add more subscribers here as needed
-  }
+// void m_initialize_publishers(ros::NodeHandle c) 
+//   {
+//     // ROS_INFO("Initializing Publishers");
+//     m_velocity_publisher = c.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
+//     //add more subscribers here as needed
+//   }
 
-void m_move(double linear, double angular) 
-  {
-      geometry_msgs::Twist msg;
-      msg.linear.x = linear;
-      msg.angular.z = angular;
-      m_velocity_publisher.publish(msg);
-  }
+// void m_move(double linear, double angular) 
+//   {
+//       geometry_msgs::Twist msg;
+//       msg.linear.x = linear;
+//       msg.angular.z = angular;
+//       m_velocity_publisher.publish(msg);
+  // }
 
 void broadcast() {
   //for broadcaster
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 {
   bool explorer_goal_sent = false;
   bool follower_goal_sent = false;
-  std::array<double, 2> a;
+  std::array<double, 2> aruco_loc; //to store aruco marker locations
   
 
   ros::init(argc, argv, "simple_navigation_goals");
@@ -81,13 +81,13 @@ int main(int argc, char** argv)
 
   //writing this to retrieve position data from parameter server
   XmlRpc::XmlRpcValue pos_list1;
-  nh.getParam("/aruco_lookup_locations/target_2", pos_list1);
+  nh.getParam("/aruco_lookup_locations/target_1", pos_list1);
   ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
   for (int32_t i = 0; i < pos_list1.size(); ++i)
   {
     ROS_ASSERT(pos_list1[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-    a.at(i) = static_cast<double>(pos_list1[i]);
+    aruco_loc.at(i) = static_cast<double>(pos_list1[i]);
   } 
 
   // tell the action client that we want to spin a thread by default
@@ -110,9 +110,9 @@ int main(int argc, char** argv)
   //Build goal for explorer
   explorer_goal.target_pose.header.frame_id = "map";
   explorer_goal.target_pose.header.stamp = ros::Time::now();
-  explorer_goal.target_pose.pose.position.x = a.at(0);//
-  explorer_goal.target_pose.pose.position.y = a.at(1);//
-  // explorer_goal.target_pose.pose.orientation.w = 1.0;
+  explorer_goal.target_pose.pose.position.x = aruco_loc.at(0);//
+  explorer_goal.target_pose.pose.position.y = aruco_loc.at(1);//
+  explorer_goal.target_pose.pose.orientation.w = 1.0;
 
   //Build goal for follower
   // follower_goal.target_pose.header.frame_id = "map";
@@ -145,7 +145,7 @@ int main(int argc, char** argv)
     }
     if (explorer_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
       
-      m_move(0, 0.5);
+      // m_move(0, 0.5);
       ROS_INFO("Hooray, robot reached goal");
     }
     // if (!follower_goal_sent) {
