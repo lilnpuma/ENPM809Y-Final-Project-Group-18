@@ -11,22 +11,6 @@
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-// ros::Publisher m_velocity_publisher;
-
-// void m_initialize_publishers(ros::NodeHandle c) 
-//   {
-//     // ROS_INFO("Initializing Publishers");
-//     m_velocity_publisher = c.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
-//     //add more subscribers here as needed
-//   }
-
-// void m_move(double linear, double angular) 
-//   {
-//       geometry_msgs::Twist msg;
-//       msg.linear.x = linear;
-//       msg.angular.z = angular;
-//       m_velocity_publisher.publish(msg);
-  // }
 
 
 
@@ -83,16 +67,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "simple_navigation_goals");
   ros::NodeHandle nh;
 
-  //writing this to retrieve position data from parameter server
-  // XmlRpc::XmlRpcValue pos_list1;
-  // nh.getParam("/aruco_lookup_locations/target_1", pos_list1);
-  // ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-  // for (int32_t i = 0; i < pos_list1.size(); ++i)
-  // {
-  //   ROS_ASSERT(pos_list1[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-  //   aruco_loc.at(i) = static_cast<double>(pos_list1[i]);
-  // } 
+  
 
   // tell the action client that we want to spin a thread by default
   MoveBaseClient explorer_client("/explorer/move_base", true);
@@ -111,12 +86,12 @@ int main(int argc, char** argv)
   move_base_msgs::MoveBaseGoal explorer_goal;
   move_base_msgs::MoveBaseGoal follower_goal;
 
-  //Build goal for explorer
+  // Build goal for explorer
   explorer_goal.target_pose.header.frame_id = "map";
   explorer_goal.target_pose.header.stamp = ros::Time::now();
-  explorer_goal.target_pose.pose.position.x = aruco_loc.at(0);//
-  explorer_goal.target_pose.pose.position.y = aruco_loc.at(1);//
-  explorer_goal.target_pose.pose.orientation.w = 0.0;
+  explorer_goal.target_pose.pose.position.x = -7;//
+  explorer_goal.target_pose.pose.position.y = 1;//
+  explorer_goal.target_pose.pose.orientation.w = 1;
 
   //Build goal for follower
   // follower_goal.target_pose.header.frame_id = "map";
@@ -126,11 +101,11 @@ int main(int argc, char** argv)
   // follower_goal.target_pose.pose.orientation.w = 1.0;
 
 
-  // explorer_client.waitForResult();
+  explorer_client.waitForResult();
 
   // ROS_INFO("Sending goal");
   // follower_client.sendGoal(follower_goal);
-  // explorer_client.waitForResult();
+  explorer_client.waitForResult();
 
 
   tf2_ros::Buffer tfBuffer;
@@ -151,6 +126,12 @@ int main(int argc, char** argv)
       
       // m_move(0, 0.5);
       ROS_INFO("Hooray, robot reached goal");
+      ros::Publisher m_velocity_publisher;
+      geometry_msgs::Twist msg;
+      msg.linear.x = 0;
+      msg.angular.z = -0.2;
+      m_velocity_publisher = nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
+      m_velocity_publisher.publish(msg);
     }
     // if (!follower_goal_sent) {
     //   ROS_INFO("Sending goal for explorer");

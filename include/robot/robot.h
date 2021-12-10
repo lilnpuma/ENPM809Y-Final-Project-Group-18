@@ -30,21 +30,43 @@ namespace fp {
     class Robot
     {
     public:
+    // main() will need to instantiate a ROS nodehandle, then pass it to the constructor
+    /**
+     * @brief Construct a new Robot object with nodehandle passed within the constructor
+     * 
+     * @param nodehandle 
+     */
+    Robot(ros::NodeHandle* nodehandle);
+    
+    /**
+     * @brief method to directly publish velocity to robot
+     * 
+     * @param msg 
+     */
+    void publish_velocities(const geometry_msgs::Twist& msg);
+    void rotate(double angle_to_rotate, bool direction, double final_angle);
+    void stop();
+    double compute_expected_final_yaw(bool direction, double angle_to_rotate);
+    
+    
+    
+    
+    
+    
     /**
      * @brief Get the goal from parameter server
      * 
      */
-    void get_goal(ros::NodeHandle n, std::vector<std::array<double, 2>> aruco_loc);
+    void get_goal(std::vector<std::array<double, 2>> aruco_loc);
     /**
      * @brief move the robot to the goal location
      * 
      */
-    void move();
+    void move(std::array<double,2> goal);
     /**
-     * @brief turn the explorer aroudn to find the aruco (fiducial callback)
+     * @brief turn the explorer around to find the aruco (fiducial callback)
      * 
      */
-    void move(std::array<double,2> goal);
     void search_aruco(); 
     /**
      * @brief publishing aruco marker location to follower
@@ -63,9 +85,11 @@ namespace fp {
     void go_home();
 
     private:
+    ros::NodeHandle m_nh;
     std::string name;
     std::array<double,2>goal{};
     std::array<std::array<double, 2>, 4> aruco_loc;
+    ros::Publisher m_velocity_publisher;
 
 
     };

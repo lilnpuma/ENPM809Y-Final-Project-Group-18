@@ -1,4 +1,9 @@
 #include "../include/robot/robot.h"
+#include <ros/ros.h>
+
+fp::Robot::Robot(ros::NodeHandle* nh) :
+    m_nh{ *nh }
+    
 
 
 void fp::Robot::move(std::array<double,2> goal)
@@ -14,17 +19,17 @@ void fp::Robot::move(std::array<double,2> goal)
 
 }
 
-void fp::Robot::get_goal(ros::NodeHandle n, std::vector<std::array<double, 2>> aruco_loc)
+void fp::Robot::get_goal(std::vector<std::array<double, 2>> aruco_loc)
 {
   XmlRpc::XmlRpcValue pos_list1;
   XmlRpc::XmlRpcValue pos_list2;
   XmlRpc::XmlRpcValue pos_list3;
   XmlRpc::XmlRpcValue pos_list4;
   //this can be done using 1 array (will try after testing)
-  n.getParam("/aruco_lookup_locations/target_1", pos_list1);
-  n.getParam("/aruco_lookup_locations/target_2", pos_list2);
-  n.getParam("/aruco_lookup_locations/target_3", pos_list3);
-  n.getParam("/aruco_lookup_locations/target_4", pos_list4);
+  m_nh.getParam("/aruco_lookup_locations/target_1", pos_list1);
+  m_nh.getParam("/aruco_lookup_locations/target_2", pos_list2);
+  m_nh.getParam("/aruco_lookup_locations/target_3", pos_list3);
+  m_nh.getParam("/aruco_lookup_locations/target_4", pos_list4);
   
   ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
   ROS_ASSERT(pos_list2.getType() == XmlRpc::XmlRpcValue::TypeArray);
@@ -54,4 +59,19 @@ void fp::Robot::get_goal(ros::NodeHandle n, std::vector<std::array<double, 2>> a
     ROS_ASSERT(pos_list4[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
     aruco_loc.at(3).at(i) = static_cast<double>(pos_list4[i]);
   }  
-} 
+}
+
+ void fp::Robot::search_aruco()
+ {
+    geometry_msgs::Twist msg;
+    msg.linear.x = 0;
+    msg.angular.z = 0.2;
+    m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
+    m_velocity_publisher.publish(msg);
+    //check these commands with the main.cpp
+ }
+
+ 
+
+
+
