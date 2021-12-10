@@ -17,13 +17,6 @@ void fp::Robot::move(std::array<double,2> goal)
   move_base_msgs::MoveBaseGoal goal;
 }
 
-<<<<<<< HEAD
-void fp::Robot::search_aruco()
-{
-    
-}
-=======
-}
 
 void fp::Robot::get_goal(std::vector<std::array<double, 2>> aruco_loc)
 {
@@ -65,7 +58,7 @@ void fp::Robot::get_goal(std::vector<std::array<double, 2>> aruco_loc)
     ROS_ASSERT(pos_list4[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
     aruco_loc.at(3).at(i) = static_cast<double>(pos_list4[i]);
   }  
-<<<<<<< HEAD
+
 }
 
  void fp::Robot::search_aruco()
