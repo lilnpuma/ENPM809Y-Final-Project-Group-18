@@ -86,11 +86,11 @@ int main(int argc, char** argv)
   explorer_goal.target_pose.pose.orientation.w = 1.0;
 
   //Build goal for follower
-  follower_goal.target_pose.header.frame_id = "map";
-  follower_goal.target_pose.header.stamp = ros::Time::now();
-  follower_goal.target_pose.pose.position.x = -0.289296;//
-  follower_goal.target_pose.pose.position.y = -1.282680;//
-  follower_goal.target_pose.pose.orientation.w = 1.0;
+  // follower_goal.target_pose.header.frame_id = "map";
+  // follower_goal.target_pose.header.stamp = ros::Time::now();
+  // follower_goal.target_pose.pose.position.x = -0.289296;//
+  // follower_goal.target_pose.pose.position.y = -1.282680;//
+  // follower_goal.target_pose.pose.orientation.w = 1.0;
 
 
   // explorer_client.waitForResult();
@@ -121,8 +121,8 @@ int main(int argc, char** argv)
     if (follower_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
       ROS_INFO("Hooray, robot reached goal");
     }
-    broadcast();
-    listen(tfBuffer);
+    // broadcast();
+    // listen(tfBuffer);
     //ros::spinOnce(); //uncomment this if you have subscribers in your code
     loop_rate.sleep();
   }

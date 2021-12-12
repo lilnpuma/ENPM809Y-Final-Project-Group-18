@@ -3,6 +3,7 @@
 
 fp::Robot::Robot(ros::NodeHandle* nh) :
     m_nh{ *nh }
+    {}
     
 
 
@@ -61,15 +62,27 @@ void fp::Robot::get_goal(std::vector<std::array<double, 2>> aruco_loc)
 
 }
 
- void fp::Robot::search_aruco()
+void fp::Robot::talker()
  {
-    geometry_msgs::Twist msg;
-    msg.linear.x = 0;
-    msg.angular.z = 0.2;
-    m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
-    m_velocity_publisher.publish(msg);
-    //check these commands with the main.cpp
+    
+   m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
  }
+
+void fp::Robot::fiducial_id_reader()
+ {
+    geometry_msgs::Twist msg; //this may go to class variables
+    geometry_msgs::Pose P;
+    
+    msg.linear.x = 0;
+    msg.angular.z = 0.1; //the bot should turn for only one round
+    m_velocity_publisher.publish(msg);
+    ros::Duration(20).sleep();
+    
+
+    //writing the callback and subscriber for fiducial transform
+ }
+
+ 
 
  
 

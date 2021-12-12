@@ -67,14 +67,14 @@ namespace fp {
      * @brief turn the explorer around to find the aruco (fiducial callback)
      * 
      */
-    void search_aruco(); 
+    void fiducial_id_reader(); 
     /**
-     * @brief publishing aruco marker location to follower
+     * @brief Creating all the Publishers
      * 
      */
     void talker();
     /**
-     * @brief recieving aruco marker location
+     * @brief Creating all the subscribers
      * 
      */
     void listener();
@@ -84,12 +84,22 @@ namespace fp {
      */
     void go_home();
 
+    /**
+     * @brief for rotating the explorer for one round
+     * 
+     * @param angle_to_rotate 
+     * @param direction 
+     * @param final_angle 
+     */
+    void rotate(double angle_to_rotate, bool direction, double final_angle);
+
     private:
     ros::NodeHandle m_nh;
     std::string name;
     std::array<double,2>goal{};
-    std::array<std::array<double, 2>, 4> aruco_loc;
+    static std::array<std::array<double, 2>, 4> aruco_loc;
     ros::Publisher m_velocity_publisher;
+    
 
 
     };
