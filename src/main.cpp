@@ -10,8 +10,8 @@
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-int pos_marker_loc;
-static std::array<std::array<double, 3>, 4> marker_loc; 
+int pos_marker_loc;   //marker index
+static std::array<std::array<double, 3>, 4> marker_loc; // locations of the markers after transformation
 
 
 void  listen(tf2_ros::Buffer& tfBuffer) {
@@ -23,8 +23,12 @@ void  listen(tf2_ros::Buffer& tfBuffer) {
     auto trans_x = transformStamped.transform.translation.x;
     auto trans_y = transformStamped.transform.translation.y;
     auto trans_z = transformStamped.transform.translation.z;
+    
+    marker_loc.at(pos_marker_loc).at(0) = pos_marker_loc;
     marker_loc.at(pos_marker_loc).at(1) = trans_x;
     marker_loc.at(pos_marker_loc).at(2) = trans_y;
+
+    ROS_INFO_STREAM("pos_ marker loc new at listener is "<<pos_marker_loc);
 
 
     ROS_INFO_STREAM("Position in map frame: ["
@@ -43,14 +47,14 @@ void  listen(tf2_ros::Buffer& tfBuffer) {
     
   }
 }
-
+static bool saw_marker{false};
 //testing out the callback method
 void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& msg)
 {
  
  if (!msg->transforms.empty())
- {
-    ROS_INFO_STREAM("I heard:  ["<< msg->transforms[0].fiducial_id<< "]");
+ {  saw_marker = true;
+    ROS_INFO_STREAM("Seen marker:  ["<< msg->transforms[0].fiducial_id<< "]");
     pos_marker_loc = msg->transforms[0].fiducial_id;
     static tf2_ros::TransformBroadcaster brc;
     geometry_msgs::TransformStamped transformStamped;
@@ -69,7 +73,7 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
     transformStamped.transform.rotation.z = msg->transforms[0].transform.rotation.z;
     transformStamped.transform.rotation.w = msg->transforms[0].transform.rotation.w;
     
-    ROS_INFO("Broadcasting");
+    ROS_INFO("Broadcasting marker location");
     brc.sendTransform(transformStamped);
     // marker_loc = listen(msg, marker_loc, tfBuffer);
 
@@ -80,7 +84,7 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
 
 
 
-std::array<std::array<double, 2>, 4> get_goal(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> aruco_loc)
+void get_goal(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &aruco_loc)
 {
   XmlRpc::XmlRpcValue pos_list1;
   XmlRpc::XmlRpcValue pos_list2;
@@ -121,8 +125,6 @@ std::array<std::array<double, 2>, 4> get_goal(ros::NodeHandle m_nh, std::array<s
     aruco_loc.at(3).at(i) = static_cast<double>(pos_list4[i]);
   }
 
-  return aruco_loc;  
-
 }
 
 // void broadcast() {
@@ -151,17 +153,17 @@ std::array<std::array<double, 2>, 4> get_goal(ros::NodeHandle m_nh, std::array<s
 int main(int argc, char** argv)
 {
   bool explorer_goal_sent = false;
-  bool follower_goal_sent = false;
-  static std::array<std::array<double, 2>, 4> aruco_loc;
+  
+  std::array<std::array<double, 2>, 4> aruco_loc;
   
   
  
   
 
   ros::init(argc, argv, "simple_navigation_goals");
-  ros::init(argc, argv, "listening to fiducial");
+  // ros::init(argc, argv, "listening to fiducial");
   ros::NodeHandle nh;
-  aruco_loc = get_goal(nh, aruco_loc);
+  get_goal(nh, aruco_loc);
   
 
 
@@ -185,11 +187,13 @@ int main(int argc, char** argv)
   move_base_msgs::MoveBaseGoal follower_goal;
 
   // Build goal for explorer
+  int i = 0;
   explorer_goal.target_pose.header.frame_id = "map";
   explorer_goal.target_pose.header.stamp = ros::Time::now();
-  explorer_goal.target_pose.pose.position.x = aruco_loc.at(1).at(0);//
-  explorer_goal.target_pose.pose.position.y = aruco_loc.at(1).at(1);//
+  explorer_goal.target_pose.pose.position.x = aruco_loc.at(i).at(0);//
+  explorer_goal.target_pose.pose.position.y = aruco_loc.at(i).at(1);//
   explorer_goal.target_pose.pose.orientation.w = 1;
+  i++;
 
   //Build goal for follower
   // follower_goal.target_pose.header.frame_id = "map";
@@ -208,14 +212,14 @@ int main(int argc, char** argv)
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(50);
  
   //buidling a publisher to do some tricks
   ros::Publisher m_velocity_publisher;
   ros::Subscriber fid_reader;
   geometry_msgs::Twist msg;
   msg.linear.x = 0;
-  msg.angular.z = 0.1;
+  msg.angular.z = 0.2;
   //writing this to move the bot with a constant angular velocity
   m_velocity_publisher = nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
   
@@ -226,27 +230,60 @@ int main(int argc, char** argv)
   
 
   while (ros::ok()) {
+    
     if (!explorer_goal_sent)     {
       ROS_INFO("Sending goal for explorer");
       explorer_client.sendGoal(explorer_goal);//this should be sent only once
       explorer_goal_sent = true;
+      saw_marker = false;
     }
-    if (explorer_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+    if (explorer_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) 
+    {
       
       // m_move(0, 0.5);
       ROS_INFO("Hooray, robot reached goal");
      
       ROS_INFO("Imparting Angular Velocity");
-      
+      while (saw_marker != true)
+      {
       m_velocity_publisher.publish(msg);
       fid_reader = nh.subscribe("/fiducial_transforms", 1000, fiducial_callback);
-      //this is nor required, rotate until it detects the marker
+      
+      ros::spinOnce();
+      
+      }
+
+    
+      
+
+       
+
+        if (i > 3)
+        {
+        explorer_goal_sent = false;
+        ROS_INFO_STREAM("Time to go home now");
+        explorer_goal.target_pose.header.stamp = ros::Time::now();
+        explorer_goal.target_pose.pose.position.x = -3.98;//
+        explorer_goal.target_pose.pose.position.y = 2.44;
+        explorer_goal.target_pose.pose.orientation.w = 1;
+        }
+        else
+        {
+        explorer_goal_sent = false;
+        ROS_INFO_STREAM("Updatinng to next goal at "<<i);
+        explorer_goal.target_pose.header.stamp = ros::Time::now();
+        explorer_goal.target_pose.pose.position.x = aruco_loc.at(i).at(0);//
+        explorer_goal.target_pose.pose.position.y = aruco_loc.at(i).at(1);//
+        i++;
+        }
+
+       //this is nor required, rotate until it detects the marker
       // ros::Duration(10).sleep(); 
       // msg.angular.z = 0;
       // m_velocity_publisher.publish(msg);
       
       
-      ros::spin();
+      // ros::spinOnce();
 
 
     }
@@ -259,8 +296,13 @@ int main(int argc, char** argv)
     //   ROS_INFO("Hooray, robot reached goal");
     // }
     //broadcast();
-    listen(tfBuffer);
+    
     //ros::spinOnce(); //uncomment this if you have subscribers in your code
+    listen(tfBuffer);
+    
+    ROS_INFO_STREAM("Updayed marker locations"<<marker_loc.at(0).at(1)<<marker_loc.at(0).at(2)
+    <<std::endl<<"Updayed marker 2 nd locations"<<marker_loc.at(1).at(1)<<marker_loc.at(1).at(2)
+    <<std::endl<<"Updayed marker 3 rd locations"<<marker_loc.at(2).at(1)<<marker_loc.at(2).at(2));
     loop_rate.sleep();
   }
 
