@@ -14,6 +14,71 @@ int pos_marker_loc;   //marker index
 static std::array<std::array<double, 3>, 4> marker_loc; // locations of the markers after transformation
 
 
+void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
+{
+   
+   
+   bool follower_goal_sent = false;
+
+   
+
+    // tell the action client that we want to spin a thread by default
+  MoveBaseClient follower_client("/follower/move_base", true);
+  while (!follower_client.waitForServer(ros::Duration(5.0))) {
+    ROS_INFO("Waiting for the move_base action server to come up for follower");
+  }
+
+   move_base_msgs::MoveBaseGoal follower_goal;
+
+   //Build goal for follower
+  follower_goal.target_pose.header.frame_id = "map";
+  follower_goal.target_pose.header.stamp = ros::Time::now();
+  follower_goal.target_pose.pose.position.x = marker_loc.at(i).at(1) - 0.4;//
+  follower_goal.target_pose.pose.position.y = marker_loc.at(i).at(2) - 0.4;//
+  follower_goal.target_pose.pose.orientation.w = 1.0;
+
+  ros::Rate loop_rate(10);
+  
+  while (ros::ok()) {
+    
+    if (!follower_goal_sent) {
+      ROS_INFO("Sending goal for follower");
+      follower_client.sendGoal(follower_goal);//this should be sent only once
+      follower_goal_sent = true;
+    }
+    if (follower_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+      ROS_INFO_STREAM("Hooray, robot reached goal with"<<i);
+      i = i+1;
+
+     
+      // if (i>3 && follower_goal.target_pose.pose.position.x == -3.98)
+      // {
+      //   ros::shutdown();
+      //   break;
+      // }
+      
+      if (i>3)
+      {
+        ROS_INFO_STREAM("Time for follower to go home now");
+        follower_goal.target_pose.header.stamp = ros::Time::now();
+        follower_goal.target_pose.pose.position.x = -3.98;//
+        follower_goal.target_pose.pose.position.y = 2.44;
+        follower_goal.target_pose.pose.orientation.w = 1;
+        
+      }
+      else
+      {
+        move_follower(marker_loc, i);
+      }  
+    }
+    // broadcast();
+    // listen(tfBuffer);
+    //ros::spinOnce(); //uncomment this if you have subscribers in your code
+    loop_rate.sleep();
+  }
+
+}
+
 void  listen(tf2_ros::Buffer& tfBuffer) {
   //for listener
 
@@ -23,6 +88,7 @@ void  listen(tf2_ros::Buffer& tfBuffer) {
     auto trans_x = transformStamped.transform.translation.x;
     auto trans_y = transformStamped.transform.translation.y;
     auto trans_z = transformStamped.transform.translation.z;
+    ros::Duration(4.0).sleep();
     
     marker_loc.at(pos_marker_loc).at(0) = pos_marker_loc;
     marker_loc.at(pos_marker_loc).at(1) = trans_x;
@@ -67,6 +133,7 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
     //creation of marker_frame with relative to camera frame at given distance
     //which is exactly what we are seeing in the camera frame
     transformStamped.transform.translation.x = msg->transforms[0].transform.translation.x;
+    ROS_INFO_STREAM("Transformed"<<transformStamped.transform.translation.x);
     transformStamped.transform.translation.y = msg->transforms[0].transform.translation.y;
     transformStamped.transform.translation.z = msg->transforms[0].transform.translation.z;
     transformStamped.transform.rotation.x = msg->transforms[0].transform.rotation.x;
@@ -127,28 +194,6 @@ void get_goal(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &aruco_
   }
 
 }
-
-// void broadcast() {
-//   //for broadcaster
-//   static tf2_ros::TransformBroadcaster br;
-//   geometry_msgs::TransformStamped transformStamped;
-
-//   //broadcast the new frame to /tf Topic
-//   transformStamped.header.stamp = ros::Time::now();
-//   transformStamped.header.frame_id = "explorer_tf/camera_rgb_optical_frame";
-//   transformStamped.child_frame_id = "my_frame";
-
-//   transformStamped.transform.translation.x = 0.5;
-//   transformStamped.transform.translation.y = 0.5;
-//   transformStamped.transform.translation.z = 0.2;
-//   transformStamped.transform.rotation.x = 0;
-//   transformStamped.transform.rotation.y = 0;
-//   transformStamped.transform.rotation.z = 0;
-//   transformStamped.transform.rotation.w = 1;
-//   ROS_INFO("Broadcasting");
-//   br.sendTransform(transformStamped);
-// }
-
 
 
 int main(int argc, char** argv)
@@ -213,16 +258,16 @@ int main(int argc, char** argv)
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
-  ros::Rate loop_rate(100);
+  ros::Rate loop_rate(50);
  
   //buidling a publisher to do some tricks
   ros::Publisher m_velocity_publisher;
   ros::Subscriber fid_reader;
   geometry_msgs::Twist msg;
   msg.linear.x = 0;
-  msg.angular.z = 0.4;
+  msg.angular.z = 0.15;
   //writing this to move the bot with a constant angular velocity
-  m_velocity_publisher = nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
+  m_velocity_publisher = nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 10);
   
   
 
@@ -245,13 +290,21 @@ int main(int argc, char** argv)
       ROS_INFO("Hooray, robot reached goal");
      
       ROS_INFO("Imparting Angular Velocity");
+      if (i>3 && explorer_goal.target_pose.pose.position.x == -3.98)
+      {
+        // ros::shutdown();
+        msg.angular.z = 0;
+        m_velocity_publisher.publish(msg);
+        ROS_INFO("Explorer at home");
+        move_follower(marker_loc);
+      }
       while (saw_marker != true)
       {
       m_velocity_publisher.publish(msg);
-      fid_reader = nh.subscribe("/fiducial_transforms", 1000, fiducial_callback);
-      ROS_INFO("I am near the callback");
+      fid_reader = nh.subscribe("/fiducial_transforms", 100, fiducial_callback);
+      // ROS_INFO("I am near the callback");
       ros::spinOnce();
-      loop_rate.sleep();
+      // loop_rate.sleep();
       }
 
     
@@ -304,7 +357,7 @@ int main(int argc, char** argv)
     ROS_INFO_STREAM("Updated marker locations"<<marker_loc.at(0).at(1)<<marker_loc.at(0).at(2)
     <<std::endl<<"Updated marker 2 nd locations"<<marker_loc.at(1).at(1)<<marker_loc.at(1).at(2)
     <<std::endl<<"Updated marker 3 rd locations"<<marker_loc.at(2).at(1)<<marker_loc.at(2).at(2));
-    // loop_rate.sleep();
+    loop_rate.sleep();
   }
 
 

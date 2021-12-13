@@ -79,10 +79,10 @@ void fp::Robot::fiducial_callback(ros::NodeHandle m_nh, const fiducial_msgs::Fid
  }
 }
 
-int32_t fp::Robot::id_callback(const std_msgs::String::ConstPtr& msg)
-{
-   return msg->data;
-}
+// int32_t fp::Robot::id_callback(const std_msgs::String::ConstPtr& msg)
+// {
+//    return msg->data;
+// }
 
 void fp::Robot::listen(tf2_ros::Buffer& tfBuffer)
 {
@@ -94,7 +94,7 @@ void fp::Robot::listen(tf2_ros::Buffer& tfBuffer)
     auto trans_y = transformStamped.transform.translation.y;
     auto trans_z = transformStamped.transform.translation.z;
     int32_t aruco_id;
-    ros::Subscriber sub = m_nh.subscribe("explorer_tf/camera_rgb_optical_frame/marker_frame/id", 10, aruco_id = id_callback);
+    // ros::Subscriber sub = m_nh.subscribe("explorer_tf/camera_rgb_optical_frame/marker_frame/id", 10, id_callback);
     marker_loc.at(aruco_id).at(0) = aruco_id;
     marker_loc.at(aruco_id).at(1) = trans_x;
     marker_loc.at(aruco_id).at(2) = trans_y;
@@ -118,7 +118,7 @@ void fp::Robot::listen(tf2_ros::Buffer& tfBuffer)
 }
 }
 
-void fp::Robot::explore()
+void fp::Robot::explore(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc)
 {
   typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
   bool explorer_goal_sent = false;
@@ -133,8 +133,8 @@ void fp::Robot::explore()
   int i = 0;
   explorer_goal.target_pose.header.frame_id = "map";
   explorer_goal.target_pose.header.stamp = ros::Time::now();
-  explorer_goal.target_pose.pose.position.x = aruco_loc.at(i).at(0);//
-  explorer_goal.target_pose.pose.position.y = aruco_loc.at(i).at(1);//
+  explorer_goal.target_pose.pose.position.x = m_aruco_loc.at(i).at(0);//
+  explorer_goal.target_pose.pose.position.y = m_aruco_loc.at(i).at(1);//
   explorer_goal.target_pose.pose.orientation.w = 1;
   i++;
 
@@ -152,11 +152,7 @@ void fp::Robot::explore()
   msg.linear.x = 0;
   msg.angular.z = 0.4;
   //writing this to move the bot with a constant angular velocity
-  m_velocity_publisher = nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
-
-  
-
-
+  m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
 }
 
 

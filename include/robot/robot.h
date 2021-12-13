@@ -1,6 +1,6 @@
 /**
  * @file robot.h
- * @author Manu Pillai (manump@umd.edu)
+ * @authors Manu Pillai (manump@umd.edu), Rishabh Singh (rsingh24@umd.edu)
  * @brief This file contains a class to represent a robot in an environment
  * @version 0.1
  * @date 2021-12-09
@@ -56,13 +56,14 @@ namespace fp {
 
     int32_t id_callback(const std_msgs::String::ConstPtr& msg);
 
-    void explore();
+    void explore(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc);
     void follow();
+    std::array<std::array<double, 2>, 4> m_aruco_loc;
 
     private:
     ros::NodeHandle m_nh;
     bool saw_marker{false};
-    std::array<std::array<double, 2>, 4> m_aruco_loc;
+    
     std::array<std::array<double, 3>, 4> marker_loc; 
 
 
