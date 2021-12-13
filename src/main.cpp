@@ -51,20 +51,20 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
       i = i+1;
 
      
-      // if (i>3 && follower_goal.target_pose.pose.position.x == -3.98)
-      // {
-      //   ros::shutdown();
-      //   break;
-      // }
+      if (i>3 && follower_goal.target_pose.pose.position.x == -4 && follower_goal.target_pose.pose.position.y == 3.5)
+      {
+        ros::shutdown();
+        break;
+      }
       
       if (i>3)
       {
         ROS_INFO_STREAM("Time for follower to go home now");
         follower_goal.target_pose.header.stamp = ros::Time::now();
-        follower_goal.target_pose.pose.position.x = -3.98;//
-        follower_goal.target_pose.pose.position.y = 2.44;
+        follower_goal.target_pose.pose.position.x = -4;//
+        follower_goal.target_pose.pose.position.y = 3.5;
         follower_goal.target_pose.pose.orientation.w = 1;
-        
+        follower_goal_sent = false;
       }
       else
       {
@@ -290,7 +290,7 @@ int main(int argc, char** argv)
       ROS_INFO("Hooray, robot reached goal");
      
       ROS_INFO("Imparting Angular Velocity");
-      if (i>3 && explorer_goal.target_pose.pose.position.x == -3.98)
+      if (i>3 && explorer_goal.target_pose.pose.position.x == -4 & explorer_goal.target_pose.pose.position.y == 2.5)
       {
         // ros::shutdown();
         msg.angular.z = 0;
@@ -317,8 +317,8 @@ int main(int argc, char** argv)
         explorer_goal_sent = false;
         ROS_INFO_STREAM("Time to go home now");
         explorer_goal.target_pose.header.stamp = ros::Time::now();
-        explorer_goal.target_pose.pose.position.x = -3.98;//
-        explorer_goal.target_pose.pose.position.y = 2.44;
+        explorer_goal.target_pose.pose.position.x = -4;//
+        explorer_goal.target_pose.pose.position.y = 2.5;
         explorer_goal.target_pose.pose.orientation.w = 1;
         }
         else
