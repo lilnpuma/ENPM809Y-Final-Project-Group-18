@@ -21,6 +21,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
 #include <cstring>
+#include "std_msgs/String.h"
+#include "std_msgs/Int32.h"
 namespace fp {
     /**
      * @brief Class to represent a robot in an environment 
@@ -30,76 +32,38 @@ namespace fp {
     class Robot
     {
     public:
-    // main() will need to instantiate a ROS nodehandle, then pass it to the constructor
     /**
-     * @brief Construct a new Robot object with nodehandle passed within the constructor
+     * @brief Subscriber to get positions of aruco markers for the follower.
      * 
-     * @param nodehandle 
+     * @param tfBuffer  
      */
-    Robot(ros::NodeHandle* nodehandle);
-    
+    void listen(tf2_ros::Buffer& tfBuffer);
+
     /**
-     * @brief method to directly publish velocity to robot
+     * @brief Get aruco information from the camera and publish the location
      * 
      * @param msg 
      */
-    void publish_velocities(const geometry_msgs::Twist& msg);
-    void rotate(double angle_to_rotate, bool direction, double final_angle);
-    void stop();
-    double compute_expected_final_yaw(bool direction, double angle_to_rotate);
-    
-    
-    
-    
-    
+    void fiducial_callback(ros::NodeHandle m_nh, const fiducial_msgs::FiducialTransformArray::ConstPtr& msg);
     
     /**
-     * @brief Get the goal from parameter server
+     * @brief Get the goal object from parameter server and store it in aruco_loc
      * 
+     * @param m_nh 
+     * @param aruco_loc 
      */
-    void get_goal(std::vector<std::array<double, 2>> aruco_loc);
-    /**
-     * @brief move the robot to the goal location
-     * 
-     */
-    void move(std::array<double,2> goal);
-    /**
-     * @brief turn the explorer around to find the aruco (fiducial callback)
-     * 
-     */
-    void fiducial_id_reader(); 
-    /**
-     * @brief Creating all the Publishers
-     * 
-     */
-    void talker();
-    /**
-     * @brief Creating all the subscribers
-     * 
-     */
-    void listener();
-    /**
-     * @brief hardcoded method to send the robot to home
-     * 
-     */
-    void go_home();
+    void get_goal(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc);
 
-    /**
-     * @brief for rotating the explorer for one round
-     * 
-     * @param angle_to_rotate 
-     * @param direction 
-     * @param final_angle 
-     */
-    void rotate(double angle_to_rotate, bool direction, double final_angle);
+    int32_t id_callback(const std_msgs::String::ConstPtr& msg);
+
+    void explore();
+    void follow();
 
     private:
     ros::NodeHandle m_nh;
-    std::string name;
-    std::array<double,2>goal{};
-    static std::array<std::array<double, 2>, 4> aruco_loc;
-    ros::Publisher m_velocity_publisher;
-    
+    bool saw_marker{false};
+    std::array<std::array<double, 2>, 4> m_aruco_loc;
+    std::array<std::array<double, 3>, 4> marker_loc; 
 
 
     };
