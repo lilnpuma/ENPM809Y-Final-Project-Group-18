@@ -47,19 +47,18 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
       follower_goal_sent = true;
     }
     if (follower_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-      ROS_INFO_STREAM("Hooray, robot reached goal with"<<i);
+      ROS_INFO_STREAM("Follower robot reached goal ID "<<i);
       i = i+1;
 
      
       if (i>3 && follower_goal.target_pose.pose.position.x == -4 && follower_goal.target_pose.pose.position.y == 3.5)
       {
-        ros::shutdown();
         break;
       }
       
       if (i>3)
       {
-        ROS_INFO_STREAM("Time for follower to go home now");
+        ROS_INFO_STREAM("Follower robot returning home");
         follower_goal.target_pose.header.stamp = ros::Time::now();
         follower_goal.target_pose.pose.position.x = -4;//
         follower_goal.target_pose.pose.position.y = 3.5;
@@ -81,7 +80,7 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
 
 void  listen(tf2_ros::Buffer& tfBuffer) {
   //for listener
-
+  ros::Duration(1.0).sleep();
   geometry_msgs::TransformStamped transformStamped;
   try {
     transformStamped = tfBuffer.lookupTransform("map", "marker_frame", ros::Time(0));
@@ -97,14 +96,14 @@ void  listen(tf2_ros::Buffer& tfBuffer) {
     ROS_INFO_STREAM("pos_ marker loc new at listener is "<<pos_marker_loc);
 
 
-    ROS_INFO_STREAM("Position in map frame: ["
-      << trans_x << ","
-      << trans_y << ","
-      << trans_z << "]"
+    ROS_INFO_STREAM("Position in map frame: [ "
+      << trans_x << ", "
+      << trans_y << ", "
+      << trans_z << " ]"
     );
 
-    ROS_INFO_STREAM("Marker is at location:  ["<< marker_loc.at(0).at(0)<< "]"<<"Marker is at location:  ["
-    << marker_loc.at(1).at(0)<< "]"<<"Marker is at location:  ["<< marker_loc.at(2).at(0)<< "]");
+    ROS_INFO_STREAM("Marker is at location:  [ "<< marker_loc.at(0).at(0)<< " ]"<<" Marker is at location: [ "
+    << marker_loc.at(1).at(0)<< " ] "<<"Marker is at location: [ "<< marker_loc.at(2).at(0)<< " ]");
     
   }
   catch (tf2::TransformException& ex) {
@@ -120,8 +119,7 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
   ROS_INFO("Inside callback");
 
  if (!msg->transforms.empty())
- {  saw_marker = true;
-    ROS_INFO_STREAM("Seen marker:  ["<< msg->transforms[0].fiducial_id<< "]");
+ {  ROS_INFO_STREAM("Seen marker:  ["<< msg->transforms[0].fiducial_id<< "]");
     pos_marker_loc = msg->transforms[0].fiducial_id;
     static tf2_ros::TransformBroadcaster brc;
     geometry_msgs::TransformStamped transformStamped;
@@ -144,8 +142,9 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
     ROS_INFO("Broadcasting marker location");
     brc.sendTransform(transformStamped);
     // marker_loc = listen(msg, marker_loc, tfBuffer);
-
+    //Sleep for some duration 
     //we can create new moving goal over here
+    saw_marker = true;
  }
 
 }
@@ -249,12 +248,11 @@ int main(int argc, char** argv)
   // follower_goal.target_pose.pose.orientation.w = 1.0;
 
 
-  explorer_client.waitForResult();
+  // explorer_client.waitForResult();
 
-  ROS_INFO("Sending goal");
-  // follower_client.sendGoal(follower_goal);
-  explorer_client.waitForResult();
-
+  // ROS_INFO("Sending goal");
+  // // follower_client.sendGoal(follower_goal);
+  // explorer_client.waitForResult();
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
@@ -287,7 +285,7 @@ int main(int argc, char** argv)
     {
       
       
-      ROS_INFO("Hooray, robot reached goal");
+      ROS_INFO("Explorer robot reached goal ");
      
       ROS_INFO("Imparting Angular Velocity");
       if (i>3 && explorer_goal.target_pose.pose.position.x == -4 & explorer_goal.target_pose.pose.position.y == 2.5)
@@ -295,16 +293,20 @@ int main(int argc, char** argv)
         // ros::shutdown();
         msg.angular.z = 0;
         m_velocity_publisher.publish(msg);
-        ROS_INFO("Explorer at home");
+        ROS_INFO("Explorer robot at home");
         move_follower(marker_loc);
+        break;
       }
-      while (saw_marker != true)
-      {
-      m_velocity_publisher.publish(msg);
-      fid_reader = nh.subscribe("/fiducial_transforms", 100, fiducial_callback);
-      // ROS_INFO("I am near the callback");
-      ros::spinOnce();
-      // loop_rate.sleep();
+      else{
+        fid_reader = nh.subscribe("/fiducial_transforms", 100, fiducial_callback);
+        while (saw_marker != true)
+          {
+          m_velocity_publisher.publish(msg);
+          // ROS_INFO("I am near the callback");
+          ros::spinOnce();
+          // loop_rate.sleep();
+          }
+          fid_reader.shutdown();
       }
 
     
@@ -315,7 +317,7 @@ int main(int argc, char** argv)
         if (i > 3)
         {
         explorer_goal_sent = false;
-        ROS_INFO_STREAM("Time to go home now");
+        ROS_INFO_STREAM("Follower robot returning home");
         explorer_goal.target_pose.header.stamp = ros::Time::now();
         explorer_goal.target_pose.pose.position.x = -4;//
         explorer_goal.target_pose.pose.position.y = 2.5;
@@ -338,8 +340,7 @@ int main(int argc, char** argv)
       
       
       // ros::spinOnce();
-
-
+      listen(tfBuffer);
     }
     // if (!follower_goal_sent) {
     //   ROS_INFO("Sending goal for explorer");
@@ -352,13 +353,13 @@ int main(int argc, char** argv)
     //broadcast();
     
     //ros::spinOnce(); //uncomment this if you have subscribers in your code
-    listen(tfBuffer);
     
-    ROS_INFO_STREAM("Updated marker locations"<<marker_loc.at(0).at(1)<<marker_loc.at(0).at(2)
-    <<std::endl<<"Updated marker 2 nd locations"<<marker_loc.at(1).at(1)<<marker_loc.at(1).at(2)
-    <<std::endl<<"Updated marker 3 rd locations"<<marker_loc.at(2).at(1)<<marker_loc.at(2).at(2));
+    
+    ROS_INFO_STREAM("Updated marker locations "<<marker_loc.at(0).at(1)<<", "<<marker_loc.at(0).at(2)
+    <<std::endl<<" Updated marker 2 nd locations "<<marker_loc.at(1).at(1)<<","<<marker_loc.at(1).at(2)
+    <<std::endl<<" Updated marker 3 rd locations "<<marker_loc.at(2).at(1)<<", "<<marker_loc.at(2).at(2));
     loop_rate.sleep();
   }
-
+ros::shutdown();
 
 }
