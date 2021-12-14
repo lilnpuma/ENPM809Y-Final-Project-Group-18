@@ -44,6 +44,7 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
     if (!follower_goal_sent) {
       ROS_INFO("Sending goal for follower");
       follower_client.sendGoal(follower_goal);//this should be sent only once
+      follower_client.waitForResult();
       follower_goal_sent = true;
     }
     if (follower_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
@@ -53,10 +54,11 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
      
       if (i>3 && follower_goal.target_pose.pose.position.x == -4 && follower_goal.target_pose.pose.position.y == 3.5)
       {
+        ROS_INFO("Follower robot at home. Mission complete. Terminating program.");
         break;
       }
       
-      if (i>3)
+      else if (i>3)
       {
         ROS_INFO_STREAM("Follower robot returning home");
         follower_goal.target_pose.header.stamp = ros::Time::now();
@@ -75,6 +77,7 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
     //ros::spinOnce(); //uncomment this if you have subscribers in your code
     loop_rate.sleep();
   }
+  ros::shutdown();
 
 }
 
@@ -116,7 +119,7 @@ static bool saw_marker{false};
 //testing out the callback method
 void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& msg)
 {
-  ROS_INFO("Inside callback");
+  // ROS_INFO("Inside callback");
 
  if (!msg->transforms.empty())
  {  ROS_INFO_STREAM("Seen marker:  ["<< msg->transforms[0].fiducial_id<< "]");
@@ -278,21 +281,19 @@ int main(int argc, char** argv)
     if (!explorer_goal_sent)     {
       ROS_INFO("Sending goal for explorer");
       explorer_client.sendGoal(explorer_goal);//this should be sent only once
+      explorer_client.waitForResult();
       explorer_goal_sent = true;
       saw_marker = false;
     }
     if (explorer_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) 
     {
-      
-      
       ROS_INFO("Explorer robot reached goal ");
-     
       ROS_INFO("Imparting Angular Velocity");
       if (i>3 && explorer_goal.target_pose.pose.position.x == -4 & explorer_goal.target_pose.pose.position.y == 2.5)
       {
         // ros::shutdown();
-        msg.angular.z = 0;
-        m_velocity_publisher.publish(msg);
+        // msg.angular.z = 0;
+        // m_velocity_publisher.publish(msg);
         ROS_INFO("Explorer robot at home");
         move_follower(marker_loc);
         break;
@@ -355,9 +356,9 @@ int main(int argc, char** argv)
     //ros::spinOnce(); //uncomment this if you have subscribers in your code
     
     
-    ROS_INFO_STREAM("Updated marker locations "<<marker_loc.at(0).at(1)<<", "<<marker_loc.at(0).at(2)
-    <<std::endl<<" Updated marker 2 nd locations "<<marker_loc.at(1).at(1)<<","<<marker_loc.at(1).at(2)
-    <<std::endl<<" Updated marker 3 rd locations "<<marker_loc.at(2).at(1)<<", "<<marker_loc.at(2).at(2));
+    // ROS_INFO_STREAM("Updated marker locations "<<marker_loc.at(0).at(1)<<", "<<marker_loc.at(0).at(2)
+    // <<std::endl<<" Updated marker 2 nd locations "<<marker_loc.at(1).at(1)<<","<<marker_loc.at(1).at(2)
+    // <<std::endl<<" Updated marker 3 rd locations "<<marker_loc.at(2).at(1)<<", "<<marker_loc.at(2).at(2));
     loop_rate.sleep();
   }
 ros::shutdown();
