@@ -1,18 +1,26 @@
+/**
+ * @file robot.cpp
+ * @authors Manu Pillai (manump@umd.edu), Rishabh Singh (rsingh24@umd.edu)
+ * @brief This file contains the library for robot class
+ * @version 1.0
+ * @date 2021-12-09
+ * @copyright Copyright (c) 2021
+ * 
+ */
+
 #include "../include/robot/robot.h"
-
-
 
 
 std::array<std::array<double, 2>, 5>  fp::Robot::get_goal()
 {
   ros::NodeHandle m_nh;
   std::array<XmlRpc::XmlRpcValue, 4> pos_list;
-  char digits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+  char target_id[] = {'1', '2', '3', '4'};
   std::string aruco_lookup_locations = "/aruco_lookup_locations/target_";
   
   for (int i = 0; i <4; i++)
   {
-    m_nh.getParam(aruco_lookup_locations + digits[i+1], pos_list[i]);
+    m_nh.getParam(aruco_lookup_locations + target_id[i], pos_list[i]);
   }
 
   for (int i = 0; i < 4; i++)
@@ -36,7 +44,7 @@ return m_aruco_loc;
 
 std::array<std::array<double, 2>, 5>  fp::Robot::get_goal(std::string m_name)
 {
-  ROS_INFO("got goal locations");
+  
   return marker_loc;
 }
 
@@ -44,7 +52,7 @@ std::array<std::array<double, 2>, 5>  fp::Robot::get_goal(std::string m_name)
 void fp::Robot::fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& m_msg)
 {
   ros::NodeHandle m_nh;
-  ROS_INFO("callback");
+ 
 if (!m_msg->transforms.empty())
  {  ROS_INFO_STREAM("Scan succesful. Found the marker with ID "<< m_msg->transforms[0].fiducial_id);
     m_aruco_id = m_msg->transforms[0].fiducial_id;
@@ -71,7 +79,7 @@ if (!m_msg->transforms.empty())
     ROS_INFO_STREAM("Broadcasting marker "<<m_aruco_id<<" location");
     brc.sendTransform(transformStamped);
     saw_marker = true;
-    ROS_INFO("saw_marker updated");
+   
   }
   else
   {
@@ -125,16 +133,16 @@ void fp::Robot::move(std::array<std::array<double, 2>, 5> goal_loc)
   ros::Publisher m_velocity_publisher;
   ros::Subscriber fid_reader;
   geometry_msgs::Twist msg;
-  ROS_INFO("initialized in move");
+
   if(m_name.compare("explorer") == 0)
   {
-    //buidling a publisher to do some tricks
+    //buidling a velocity publisher 
     
     msg.linear.x = 0;
     msg.angular.z = 0.15;
-    //writing this to move the bot with a constant angular velocity
+    // move the bot with a constant angular velocity
     m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 10);
-    ROS_INFO("vel publisher initialized");
+   
   }
   
    
@@ -156,7 +164,7 @@ void fp::Robot::move(std::array<std::array<double, 2>, 5> goal_loc)
   {
       if (!goal_sent) {
       ROS_INFO_STREAM("Sending goal to "<<m_name);
-      m_client.sendGoal(m_goal);//this should be sent only once
+      m_client.sendGoal(m_goal);//this should be sent only once per goal
       m_client.waitForResult();
       goal_sent = true;
     }
@@ -195,14 +203,10 @@ void fp::Robot::move(std::array<std::array<double, 2>, 5> goal_loc)
        m_goal.target_pose.pose.orientation.w = 1.0;
        i++;
       }  
-      // if (m_name.compare("explorer") == 0)
-      // {
-        
-      // }
-      
+     
     }
   
     loop_rate.sleep();
   }
-  // ros::shutdown(); 
+ 
 }

@@ -2,12 +2,13 @@
  * @file robot.h
  * @authors Manu Pillai (manump@umd.edu), Rishabh Singh (rsingh24@umd.edu)
  * @brief This file contains a class to represent a robot in an environment
- * @version 0.1
+ * @version 1.0
  * @date 2021-12-09
  * 
  * @copyright Copyright (c) 2021
  * 
  */
+
 #ifndef ROBOT_H
 #define ROBOT_H
 #include <array>
@@ -42,7 +43,7 @@ namespace fp {
     /**
      * @brief Construct a new Robot object
      * 
-     * @param name to differentiate between explorer and follower objects
+     * @param name: std::string 
      */
     Robot(std::string name):
     m_name{name},
@@ -71,36 +72,38 @@ namespace fp {
     
       
      /**
-      * @brief Get the goal object from parameter server and store it in aruco_loc
+      * @brief Get the goal array from parameter server and store it in aruco_loc
       * 
       * @return std::array<std::array<double, 2>, 5> array of goal locations including home 
       */
     std::array<std::array<double, 2>, 5> get_goal();
     /**
-     * @brief Get the goal object 
+     * @brief Get the goal array for follower and store it in marker_loc
      * 
-     * @param m_name 
+     * @param m_name: std::string
      * @return std::array<std::array<double, 2>, 5> 
      */
     std::array<std::array<double, 2>, 5> get_goal(std::string m_name);
-    
-
-    void explore(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc);
-    void follow(std::array<std::array<double, 3>, 4> marker_loc, int i = 0);
+    /**
+     * @brief Allows the robots to move to goal location. In case of the explorer, it also turns on spot and finds the aruco marker and broadcasts its 
+     * location wrt global coordinates after transformation.
+     * 
+     * @param goal_loc: std::array<std::array<double, 2>, 5>  
+     */
     void move(std::array<std::array<double, 2>, 5> goal_loc);
    
 
     
     private:
-    ros::NodeHandle m_nh;
-    bool saw_marker{false};
-    int32_t m_aruco_id{};
-    std::array<std::array<double, 2>, 5> marker_loc; 
-    actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> m_client;
-    move_base_msgs::MoveBaseGoal m_goal;
-    std::string m_name;
-    geometry_msgs::Twist m_msg;
-    std::array<std::array<double, 2>, 5> m_aruco_loc;
+    ros::NodeHandle m_nh; //ROS Node handle
+    bool saw_marker{false}; // Flag for marker spotting
+    int32_t m_aruco_id{}; // Index for aruco locations
+    std::array<std::array<double, 2>, 5> marker_loc;  //follower goal array with the fifth element being home location
+    actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> m_client; //move base client
+    move_base_msgs::MoveBaseGoal m_goal; // move base goal
+    std::string m_name; // robot name
+    geometry_msgs::Twist m_msg; // used to store the detected fiducial messages
+    std::array<std::array<double, 2>, 5> m_aruco_loc; //follower goal array with the fifth element being home location
     
     };
 }
