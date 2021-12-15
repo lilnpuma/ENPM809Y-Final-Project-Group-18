@@ -3,57 +3,51 @@
 
 
 
-void fp::Robot::get_goal(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc)
+std::array<std::array<double, 2>, 5>  fp::Robot::get_goal()
 {
-  XmlRpc::XmlRpcValue pos_list1;
-  XmlRpc::XmlRpcValue pos_list2;
-  XmlRpc::XmlRpcValue pos_list3;
-  XmlRpc::XmlRpcValue pos_list4;
-  //this can be done using 1 array (will try after testing)
-  m_nh.getParam("/aruco_lookup_locations/target_1", pos_list1);
-  m_nh.getParam("/aruco_lookup_locations/target_2", pos_list2);
-  m_nh.getParam("/aruco_lookup_locations/target_3", pos_list3);
-  m_nh.getParam("/aruco_lookup_locations/target_4", pos_list4);
+  ros::NodeHandle m_nh;
+  std::array<XmlRpc::XmlRpcValue, 4> pos_list;
+  char digits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+  std::string aruco_lookup_locations = "/aruco_lookup_locations/target_";
   
-  ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
-  ROS_ASSERT(pos_list2.getType() == XmlRpc::XmlRpcValue::TypeArray);
-  ROS_ASSERT(pos_list3.getType() == XmlRpc::XmlRpcValue::TypeArray);
-  ROS_ASSERT(pos_list1.getType() == XmlRpc::XmlRpcValue::TypeArray);
-
-  for (int32_t i = 0; i < pos_list1.size(); ++i)
+  for (int i = 0; i <4; i++)
   {
-    ROS_ASSERT(pos_list1[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-    m_aruco_loc.at(0).at(i) = static_cast<double>(pos_list1[i]);
+    m_nh.getParam(aruco_lookup_locations + digits[i+1], pos_list[i]);
   }
 
-  for (int32_t i = 0; i < pos_list2.size(); ++i)
+  for (int i = 0; i < 4; i++)
   {
-    ROS_ASSERT(pos_list2[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-    m_aruco_loc.at(1).at(i) = static_cast<double>(pos_list2[i]);
-  } 
-
-  for (int32_t i = 0; i < pos_list3.size(); ++i)
+    ROS_ASSERT(pos_list[i].getType() == XmlRpc::XmlRpcValue::TypeArray);
+  }
+  
+for (int i = 0; i < 4; i ++)
+{
+  for (int32_t j = 0; j < pos_list[i].size(); ++j)
   {
-    ROS_ASSERT(pos_list3[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-    m_aruco_loc.at(2).at(i) = static_cast<double>(pos_list3[i]);
-  } 
-
-  for (int32_t i = 0; i < pos_list4.size(); ++i)
-  {
-    ROS_ASSERT(pos_list4[i].getType() == XmlRpc::XmlRpcValue::TypeDouble);
-    m_aruco_loc.at(3).at(i) = static_cast<double>(pos_list4[i]);
-  }  
+    ROS_ASSERT(pos_list[i][j].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+    m_aruco_loc.at(i).at(j) = static_cast<double>(pos_list[i][j]);
+  }
+}
+m_aruco_loc.at(4).at(0) = -4;   //home location for explorer 
+m_aruco_loc.at(4).at(1) = 2.5;
+return m_aruco_loc;
 
 }
 
-void fp::Robot::fiducial_callback(ros::NodeHandle m_nh, const fiducial_msgs::FiducialTransformArray::ConstPtr& msg)
+std::array<std::array<double, 2>, 5>  fp::Robot::get_goal(std::string m_name)
 {
-  ROS_INFO("Inside callback");
-  int32_t aruco_id; //marker index
- if (!msg->transforms.empty())
- {  saw_marker = true;
-    ROS_INFO_STREAM("Seen marker:  ["<< msg->transforms[0].fiducial_id<< "]");
-    aruco_id = msg->transforms[0].fiducial_id;
+  ROS_INFO("got goal locations");
+  return marker_loc;
+}
+
+
+void fp::Robot::fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& m_msg)
+{
+  ros::NodeHandle m_nh;
+  ROS_INFO("callback");
+if (!m_msg->transforms.empty())
+ {  ROS_INFO_STREAM("Scan succesful. Found the marker with ID "<< m_msg->transforms[0].fiducial_id);
+    m_aruco_id = m_msg->transforms[0].fiducial_id;
     static tf2_ros::TransformBroadcaster brc;
     geometry_msgs::TransformStamped transformStamped;
      
@@ -63,54 +57,55 @@ void fp::Robot::fiducial_callback(ros::NodeHandle m_nh, const fiducial_msgs::Fid
     transformStamped.child_frame_id = "marker_frame";
     //creation of marker_frame with relative to camera frame at given distance
     //which is exactly what we are seeing in the camera frame
-    transformStamped.transform.translation.x = msg->transforms[0].transform.translation.x;
-    transformStamped.transform.translation.y = msg->transforms[0].transform.translation.y;
-    transformStamped.transform.translation.z = msg->transforms[0].transform.translation.z;
-    transformStamped.transform.rotation.x = msg->transforms[0].transform.rotation.x;
-    transformStamped.transform.rotation.y = msg->transforms[0].transform.rotation.y;
-    transformStamped.transform.rotation.z = msg->transforms[0].transform.rotation.z;
-    transformStamped.transform.rotation.w = msg->transforms[0].transform.rotation.w;
+    transformStamped.transform.translation.x = m_msg->transforms[0].transform.translation.x;
+    transformStamped.transform.translation.y = m_msg->transforms[0].transform.translation.y;
+    transformStamped.transform.translation.z = m_msg->transforms[0].transform.translation.z;
+    transformStamped.transform.rotation.x = m_msg->transforms[0].transform.rotation.x;
+    transformStamped.transform.rotation.y = m_msg->transforms[0].transform.rotation.y;
+    transformStamped.transform.rotation.z = m_msg->transforms[0].transform.rotation.z;
+    transformStamped.transform.rotation.w = m_msg->transforms[0].transform.rotation.w;
     
-    ros::Publisher pub_id = m_nh.advertise<std_msgs::Int32>("explorer_tf/camera_rgb_optical_frame/marker_frame/id", 10);
-    pub_id.publish(aruco_id);
-    ROS_INFO("Broadcasting marker location");
+
+  if((transformStamped.transform.translation.x)*(transformStamped.transform.translation.x) + (transformStamped.transform.translation.y)*(transformStamped.transform.translation.y) < 4)
+  {
+    ROS_INFO_STREAM("Broadcasting marker "<<m_aruco_id<<" location");
     brc.sendTransform(transformStamped);
-    
+    saw_marker = true;
+    ROS_INFO("saw_marker updated");
+  }
+  else
+  {
+    ROS_INFO("Ignored detected marker as it is too far.");
+  }
  }
 }
 
-// int32_t fp::Robot::id_callback(const std_msgs::String::ConstPtr& msg)
-// {
-//    return msg->data;
-// }
 
 void fp::Robot::listen(tf2_ros::Buffer& tfBuffer)
 {
   ros::NodeHandle m_nh;
+  ros::Duration(1.0).sleep();
   geometry_msgs::TransformStamped transformStamped;
   try {
     transformStamped = tfBuffer.lookupTransform("map", "marker_frame", ros::Time(0));
-    auto trans_x = transformStamped.transform.translation.x;
-    auto trans_y = transformStamped.transform.translation.y;
+    auto trans_x = (transformStamped.transform.translation.x + m_goal.target_pose.pose.position.x)/2;
+    auto trans_y = (transformStamped.transform.translation.y + m_goal.target_pose.pose.position.y)/2;
     auto trans_z = transformStamped.transform.translation.z;
-    int32_t aruco_id;
-    // ros::Subscriber sub = m_nh.subscribe("explorer_tf/camera_rgb_optical_frame/marker_frame/id", 10, id_callback);
-    marker_loc.at(aruco_id).at(0) = aruco_id;
-    marker_loc.at(aruco_id).at(1) = trans_x;
-    marker_loc.at(aruco_id).at(2) = trans_y;
+    ros::Duration(4.0).sleep();
+       
+    
+    marker_loc.at(m_aruco_id).at(0) = trans_x;
+    marker_loc.at(m_aruco_id).at(1) = trans_y;
 
-    ROS_INFO_STREAM("pos_ marker loc new at listener is "<<aruco_id);
+    marker_loc.at(4).at(0) = -4;
+    marker_loc.at(4).at(1) =  3.5;
 
 
-    ROS_INFO_STREAM("Position in map frame: ["
-      << trans_x << ","
-      << trans_y << ","
+    ROS_INFO_STREAM("Position of marker with ID "<<m_aruco_id <<" in map frame: ["
+      << trans_x << ", "
+      << trans_y << ", "
       << trans_z << "]"
     );
-
-    ROS_INFO_STREAM("Marker is at location:  ["<< marker_loc.at(0).at(0)<< "]"<<"Marker is at location:  ["
-    << marker_loc.at(1).at(0)<< "]"<<"Marker is at location:  ["<< marker_loc.at(2).at(0)<< "]");
-    
   }
   catch (tf2::TransformException& ex) {
     ROS_WARN("%s", ex.what());
@@ -118,43 +113,96 @@ void fp::Robot::listen(tf2_ros::Buffer& tfBuffer)
 }
 }
 
-void fp::Robot::explore(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc)
+void fp::Robot::move(std::array<std::array<double, 2>, 5> goal_loc)
 {
-  typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-  bool explorer_goal_sent = false;
-  fp::Robot::get_goal(m_nh, m_aruco_loc);
-  MoveBaseClient explorer_client("/explorer/move_base", true);
-  
-  while (!explorer_client.waitForServer(ros::Duration(5.0))) {
-    ROS_INFO("Waiting for the move_base action server to come up for explorer");
-  }
-  move_base_msgs::MoveBaseGoal explorer_goal;
+ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
+ ros::NodeHandle m_nh; 
 
+  bool goal_sent = false;
   int i = 0;
-  explorer_goal.target_pose.header.frame_id = "map";
-  explorer_goal.target_pose.header.stamp = ros::Time::now();
-  explorer_goal.target_pose.pose.position.x = m_aruco_loc.at(i).at(0);//
-  explorer_goal.target_pose.pose.position.y = m_aruco_loc.at(i).at(1);//
-  explorer_goal.target_pose.pose.orientation.w = 1;
-  i++;
-
-  explorer_client.waitForResult();
-  ROS_INFO("Sending goal");
-
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
-  ros::Rate loop_rate(100);
-
-  //buidling a publisher to do some tricks
   ros::Publisher m_velocity_publisher;
   ros::Subscriber fid_reader;
   geometry_msgs::Twist msg;
-  msg.linear.x = 0;
-  msg.angular.z = 0.4;
-  //writing this to move the bot with a constant angular velocity
-  m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 100);
+  ROS_INFO("initialized in move");
+  if(m_name.compare("explorer") == 0)
+  {
+    //buidling a publisher to do some tricks
+    
+    msg.linear.x = 0;
+    msg.angular.z = 0.15;
+    //writing this to move the bot with a constant angular velocity
+    m_velocity_publisher = m_nh.advertise<geometry_msgs::Twist>("/explorer/cmd_vel", 10);
+    ROS_INFO("vel publisher initialized");
+  }
+  
+   
+   m_goal.target_pose.header.frame_id = "map";
+   m_goal.target_pose.header.stamp = ros::Time::now();
+   m_goal.target_pose.pose.position.x = goal_loc.at(i).at(0);
+   m_goal.target_pose.pose.position.y = goal_loc.at(i).at(1);
+   m_goal.target_pose.pose.orientation.w = 1.0;
+   i++;  
+
+  while (!m_client.waitForServer(ros::Duration(5.0))) {
+    ROS_INFO_STREAM("Waiting for the move_base action server to come up for "<< m_name);
+  }
+  
+  
+  ros::Rate loop_rate(10);
+  
+  while (ros::ok()) 
+  {
+      if (!goal_sent) {
+      ROS_INFO_STREAM("Sending goal to "<<m_name);
+      m_client.sendGoal(m_goal);//this should be sent only once
+      m_client.waitForResult();
+      goal_sent = true;
+    }
+    if (m_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+     
+      if  (m_goal.target_pose.pose.position.x == -4)
+      {
+        ROS_INFO_STREAM( m_name<<" robot reached home.");
+        break;
+      }
+  
+      else
+      {
+       ROS_INFO_STREAM(m_name<<" robot reached goal" );
+       if(m_name.compare("explorer") == 0)
+      {
+        
+        ROS_INFO("Begin scan");
+        fid_reader = m_nh.subscribe("/fiducial_transforms", 100, &fp::Robot::fiducial_callback, this);
+        while (saw_marker != true)
+          {
+           m_velocity_publisher.publish(msg);
+           ros::spinOnce();
+          }
+        fid_reader.shutdown();
+        saw_marker = false;
+        listen(tfBuffer);
+      }
+       
+       goal_sent = false;
+       
+       m_goal.target_pose.header.frame_id = "map";
+       m_goal.target_pose.header.stamp = ros::Time::now();
+       m_goal.target_pose.pose.position.x = goal_loc.at(i).at(0);
+       m_goal.target_pose.pose.position.y = goal_loc.at(i).at(1);
+       m_goal.target_pose.pose.orientation.w = 1.0;
+       i++;
+      }  
+      // if (m_name.compare("explorer") == 0)
+      // {
+        
+      // }
+      
+    }
+  
+    loop_rate.sleep();
+  }
+  // ros::shutdown(); 
 }
-
-
-
-

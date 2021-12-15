@@ -33,40 +33,75 @@ namespace fp {
     {
     public:
     /**
-     * @brief Subscriber to get positions of aruco markers for the follower.
+     * @brief Default Constructor for Robot object
+     * 
+     */
+    Robot():m_client{"/explorer/move_base", true}, m_name{"explorer"}{
+
+    }
+    /**
+     * @brief Construct a new Robot object
+     * 
+     * @param name to differentiate between explorer and follower objects
+     */
+    Robot(std::string name):
+    m_name{name},
+    m_client{"/"+name+"/move_base", true}
+    {
+
+    }
+    
+
+
+    /**
+     * @brief Listens to tf2_ros::Buffer and uses tf transform to get the coordinates of the markers in map frame.
+     * Used to get goal locations for follower robot.
      * 
      * @param tfBuffer  
      */
     void listen(tf2_ros::Buffer& tfBuffer);
 
     /**
-     * @brief Get aruco information from the camera and publish the location
+     * @brief Detect aruco information from the camera and publish the location and aruco ID
      * 
      * @param msg 
      */
-    void fiducial_callback(ros::NodeHandle m_nh, const fiducial_msgs::FiducialTransformArray::ConstPtr& msg);
+    void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& msg);
     
+    
+      
+     /**
+      * @brief Get the goal object from parameter server and store it in aruco_loc
+      * 
+      * @return std::array<std::array<double, 2>, 5> array of goal locations including home 
+      */
+    std::array<std::array<double, 2>, 5> get_goal();
     /**
-     * @brief Get the goal object from parameter server and store it in aruco_loc
+     * @brief Get the goal object 
      * 
-     * @param m_nh 
-     * @param aruco_loc 
+     * @param m_name 
+     * @return std::array<std::array<double, 2>, 5> 
      */
-    void get_goal(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc);
-
-    int32_t id_callback(const std_msgs::String::ConstPtr& msg);
+    std::array<std::array<double, 2>, 5> get_goal(std::string m_name);
+    
 
     void explore(ros::NodeHandle m_nh, std::array<std::array<double, 2>, 4> &m_aruco_loc);
-    void follow();
-    std::array<std::array<double, 2>, 4> m_aruco_loc;
+    void follow(std::array<std::array<double, 3>, 4> marker_loc, int i = 0);
+    void move(std::array<std::array<double, 2>, 5> goal_loc);
+   
 
+    
     private:
     ros::NodeHandle m_nh;
     bool saw_marker{false};
+    int32_t m_aruco_id{};
+    std::array<std::array<double, 2>, 5> marker_loc; 
+    actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> m_client;
+    move_base_msgs::MoveBaseGoal m_goal;
+    std::string m_name;
+    geometry_msgs::Twist m_msg;
+    std::array<std::array<double, 2>, 5> m_aruco_loc;
     
-    std::array<std::array<double, 3>, 4> marker_loc; 
-
-
     };
 }
 #endif

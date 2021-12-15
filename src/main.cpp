@@ -33,8 +33,8 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
    //Build goal for follower
   follower_goal.target_pose.header.frame_id = "map";
   follower_goal.target_pose.header.stamp = ros::Time::now();
-  follower_goal.target_pose.pose.position.x = marker_loc.at(i).at(1) - 0.4;//
-  follower_goal.target_pose.pose.position.y = marker_loc.at(i).at(2) - 0.4;//
+  follower_goal.target_pose.pose.position.x = marker_loc.at(i).at(1);//
+  follower_goal.target_pose.pose.position.y = marker_loc.at(i).at(2);//
   follower_goal.target_pose.pose.orientation.w = 1.0;
 
   ros::Rate loop_rate(10);
@@ -42,14 +42,14 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
   while (ros::ok()) {
     
     if (!follower_goal_sent) {
-      ROS_INFO("Sending goal for follower");
+      ROS_INFO("Sending goal to follower");
       follower_client.sendGoal(follower_goal);//this should be sent only once
       follower_client.waitForResult();
       follower_goal_sent = true;
     }
     if (follower_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-      ROS_INFO_STREAM("Follower robot reached goal ID "<<i);
-      i = i+1;
+      
+     
 
      
       if (i>3 && follower_goal.target_pose.pose.position.x == -4 && follower_goal.target_pose.pose.position.y == 3.5)
@@ -69,8 +69,10 @@ void move_follower(std::array<std::array<double, 3>, 4> marker_loc, int i =0)
       }
       else
       {
+        ROS_INFO_STREAM("Follower robot reached goal ID "<<i);
         move_follower(marker_loc, i);
       }  
+       i = i+1;
     }
     // broadcast();
     // listen(tfBuffer);
@@ -96,21 +98,17 @@ void  listen(tf2_ros::Buffer& tfBuffer) {
     marker_loc.at(pos_marker_loc).at(1) = trans_x;
     marker_loc.at(pos_marker_loc).at(2) = trans_y;
 
-    ROS_INFO_STREAM("pos_ marker loc new at listener is "<<pos_marker_loc);
+    
 
 
-    ROS_INFO_STREAM("Position in map frame: [ "
+    ROS_INFO_STREAM("Position of marker with ID "<<pos_marker_loc <<" in map frame: ["
       << trans_x << ", "
       << trans_y << ", "
-      << trans_z << " ]"
+      << trans_z << "]"
     );
-
-    ROS_INFO_STREAM("Marker is at location:  [ "<< marker_loc.at(0).at(0)<< " ]"<<" Marker is at location: [ "
-    << marker_loc.at(1).at(0)<< " ] "<<"Marker is at location: [ "<< marker_loc.at(2).at(0)<< " ]");
-    
   }
   catch (tf2::TransformException& ex) {
-    ROS_WARN("%s", ex.what());
+    // ROS_WARN("%s", ex.what());
     ros::Duration(1.0).sleep();
     
   }
@@ -122,7 +120,7 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
   // ROS_INFO("Inside callback");
 
  if (!msg->transforms.empty())
- {  ROS_INFO_STREAM("Seen marker:  ["<< msg->transforms[0].fiducial_id<< "]");
+ {  ROS_INFO_STREAM("Scan succesful. Found the marker with ID "<< msg->transforms[0].fiducial_id);
     pos_marker_loc = msg->transforms[0].fiducial_id;
     static tf2_ros::TransformBroadcaster brc;
     geometry_msgs::TransformStamped transformStamped;
@@ -133,16 +131,15 @@ void fiducial_callback(const fiducial_msgs::FiducialTransformArray::ConstPtr& ms
     transformStamped.child_frame_id = "marker_frame";
     //creation of marker_frame with relative to camera frame at given distance
     //which is exactly what we are seeing in the camera frame
-    transformStamped.transform.translation.x = msg->transforms[0].transform.translation.x;
-    ROS_INFO_STREAM("Transformed"<<transformStamped.transform.translation.x);
-    transformStamped.transform.translation.y = msg->transforms[0].transform.translation.y;
+    transformStamped.transform.translation.x = msg->transforms[0].transform.translation.x/2;
+    transformStamped.transform.translation.y = msg->transforms[0].transform.translation.y/2;
     transformStamped.transform.translation.z = msg->transforms[0].transform.translation.z;
     transformStamped.transform.rotation.x = msg->transforms[0].transform.rotation.x;
     transformStamped.transform.rotation.y = msg->transforms[0].transform.rotation.y;
     transformStamped.transform.rotation.z = msg->transforms[0].transform.rotation.z;
     transformStamped.transform.rotation.w = msg->transforms[0].transform.rotation.w;
     
-    ROS_INFO("Broadcasting marker location");
+    ROS_INFO_STREAM("Broadcasting marker "<<pos_marker_loc<<" location");
     brc.sendTransform(transformStamped);
     // marker_loc = listen(msg, marker_loc, tfBuffer);
     //Sleep for some duration 
@@ -279,7 +276,7 @@ int main(int argc, char** argv)
   while (ros::ok()) {
     
     if (!explorer_goal_sent)     {
-      ROS_INFO("Sending goal for explorer");
+      ROS_INFO("Sending goal to explorer");
       explorer_client.sendGoal(explorer_goal);//this should be sent only once
       explorer_client.waitForResult();
       explorer_goal_sent = true;
@@ -287,9 +284,8 @@ int main(int argc, char** argv)
     }
     if (explorer_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) 
     {
-      ROS_INFO("Explorer robot reached goal ");
-      ROS_INFO("Imparting Angular Velocity");
-      if (i>3 && explorer_goal.target_pose.pose.position.x == -4 & explorer_goal.target_pose.pose.position.y == 2.5)
+      
+      if (i>3 && explorer_goal.target_pose.pose.position.x == -4 && explorer_goal.target_pose.pose.position.y == 2.5)
       {
         // ros::shutdown();
         // msg.angular.z = 0;
@@ -299,6 +295,8 @@ int main(int argc, char** argv)
         break;
       }
       else{
+        ROS_INFO("Explorer reached goal ");
+        ROS_INFO("Begin scan");
         fid_reader = nh.subscribe("/fiducial_transforms", 100, fiducial_callback);
         while (saw_marker != true)
           {
@@ -327,7 +325,7 @@ int main(int argc, char** argv)
         else
         {
         explorer_goal_sent = false;
-        ROS_INFO_STREAM("Updatinng to next goal at "<<i);
+        ROS_INFO("Sending next goal to explorer ");
         explorer_goal.target_pose.header.stamp = ros::Time::now();
         explorer_goal.target_pose.pose.position.x = aruco_loc.at(i).at(0);//
         explorer_goal.target_pose.pose.position.y = aruco_loc.at(i).at(1);//
